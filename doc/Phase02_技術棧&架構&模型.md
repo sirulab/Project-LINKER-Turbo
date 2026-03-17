@@ -5,7 +5,7 @@
 採用伺服器端渲染 (SSR) 以最快速度打造出可用的 MVP：
 
 * **後端框架：** FastAPI (具備高效能、非同步支援與自動化 OpenAPI 文件生成)。
-* **資料庫 ORM：** SQLAlchemy (管理關聯式資料庫實體)。
+* **資料庫 ORM：** SQLModel
 * **資料庫引擎：** SQLite (初期 MVP 快速開發與單機部署)，保留未來無縫轉移至 PostgreSQL 的能力。
 * **前端渲染：** Jinja2 Templates + Bootstrap 5 (適合快速打造後台管理與表單填寫介面)。
 * **資料驗證：** Pydantic (確保 API 輸入輸出的資料型態正確)。
