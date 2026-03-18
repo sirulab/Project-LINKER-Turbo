@@ -42,10 +42,6 @@
   - 欄位：`id`, `name`, `description`, `quantity`, `unit_price`, `status`
   - 關聯：`N` to `1` `Quote`, `1` to `N` `Timesheet`
 
-* **Receipt (收款紀錄)**
-  - 欄位：`id`, `receipt_number`, `amount`, `payment_date`, `note`
-  - 關聯：`N` to `1` `Quote`
-
 * **Employee (員工)**
   - 欄位：`id`, `name`, `email`, `role` (Enum: `admin`, `employee`), `hourly_rate` (內部成本時薪), `is_active`
   - 關聯：`1` to `N` `Timesheet`
