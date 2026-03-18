@@ -1,0 +1,19 @@
+# Web Framework
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+
+# ORM & Database
+sqlmodel==0.0.22
+aiosqlite==0.20.0
+
+# Templating
+jinja2==3.1.6
+
+# Form & File handling
+python-multipart==0.0.20
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Data validation (pulled in by FastAPI/SQLModel, pinned for clarity)
+pydantic==2.11.1
