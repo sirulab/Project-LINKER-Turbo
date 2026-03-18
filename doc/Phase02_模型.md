@@ -39,7 +39,7 @@
   - 關聯：`N` to `1` `Project`, `1` to `N` `Task`
 
 * **Task (任務)**
-  - 欄位：`id`, `name`, `description`, `quantity`, `unit_price`, `status`
+  - 欄位：`id`, `name`, `description`, `quantity` (預估時數), `unit_price`, `status`
   - 關聯：`N` to `1` `Quote`, `1` to `N` `Timesheet`
 
 * **Employee (員工)**
