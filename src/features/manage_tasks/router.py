@@ -1,13 +1,17 @@
-"""Feature: manage_tasks - create and list API.
+"""Feature: manage_tasks - HTML page + create and list API.
 
-Optional query filters:
-  - ?quote_id=<id>            -- filter tasks by parent quote
-  - ?status=todo|doing|done   -- filter by task status
+Route map (prefix: /tasks)
+  GET  /tasks/           Task list page (HTML)
+  GET  /tasks/api/       All tasks (JSON); filters: ?quote_id=&status=
+  POST /tasks/api/       Create task (JSON)
 """
 
+from pathlib import Path
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from src.database import get_session
@@ -18,8 +22,26 @@ router = APIRouter()
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
+_TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "templates"
+templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 
-@router.get("/", response_model=list[TaskRead])
+
+# -- HTML routes --------------------------------------------------------------
+
+@router.get("/", response_class=HTMLResponse)
+def tasks_page(request: Request, session: SessionDep):
+    """Render the task list page."""
+    tasks = session.exec(select(Task)).all()
+    return templates.TemplateResponse(
+        request,
+        "features/manage_tasks/list.html",
+        {"tasks": tasks},
+    )
+
+
+# -- JSON API routes ----------------------------------------------------------
+
+@router.get("/api/", response_model=list[TaskRead], tags=["Tasks API"])
 def list_tasks(
     session: SessionDep,
     quote_id: Optional[int] = Query(None),
@@ -33,7 +55,7 @@ def list_tasks(
     return session.exec(stmt).all()
 
 
-@router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
+@router.post("/api/", response_model=TaskRead, status_code=status.HTTP_201_CREATED, tags=["Tasks API"])
 def create_task(payload: TaskCreate, session: SessionDep):
     task = Task(**payload.model_dump())
     session.add(task)

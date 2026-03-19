@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -60,7 +61,7 @@ app.include_router(timesheet_router, prefix="/timesheet", tags=["Timesheet"])
 app.include_router(burn_rate_router, prefix="/burn-rate", tags=["Burn Rate"])
 
 
-# ── Health check ──────────────────────────────────────────────────────────────
-@app.get("/", tags=["Health"])
+# ── Home: redirect to dashboard ───────────────────────────────────────────────
+@app.get("/", include_in_schema=False)
 def root():
-    return {"status": "ok", "app": "Project LINKER Turbo"}
+    return RedirectResponse(url="/burn-rate/")

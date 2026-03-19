@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}報價單列表 — LINKER Turbo{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h2 class="fw-bold mb-0">
+    <i class="bi bi-receipt me-2 text-primary"></i>報價單列表
+  </h2>
+  <span class="badge bg-secondary fs-6">共 {{ quotes | length }} 筆</span>
+</div>
+
+{% if quotes %}
+<div class="table-responsive">
+  <table class="table table-hover table-bordered align-middle bg-white shadow-sm rounded">
+    <thead class="table-dark">
+      <tr>
+        <th>#</th>
+        <th>報價單編號</th>
+        <th>狀態</th>
+        <th>所屬專案</th>
+        <th>總金額 (NTD)</th>
+        <th>有效期限</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for quote in quotes %}
+      <tr>
+        <td class="text-muted small">{{ quote.id }}</td>
+        <td class="fw-semibold">{{ quote.quote_number }}</td>
+        <td>
+          {% if quote.status.value == 'draft' %}
+            <span class="badge bg-warning text-dark">草稿</span>
+          {% elif quote.status.value == 'sent' %}
+            <span class="badge bg-info text-dark">已送出</span>
+          {% elif quote.status.value == 'accepted' %}
+            <span class="badge bg-success">已接受</span>
+          {% else %}
+            <span class="badge bg-danger">已取消</span>
+          {% endif %}
+        </td>
+        <td>{{ quote.project_id or '—' }}</td>
+        <td>{{ quote.total_amount }}</td>
+        <td>{{ quote.valid_until or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-receipt display-3 text-muted"></i>
+  <h5 class="mt-3 text-muted">尚無任何報價單資料</h5>
+  <p class="text-muted small">請透過 API 新增報價單後再回來查看。</p>
+</div>
+{% endif %}
+{% endblock %}
