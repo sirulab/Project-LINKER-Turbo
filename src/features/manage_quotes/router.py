@@ -51,7 +51,7 @@ def quotes_page(request: Request, session: SessionDep):
 
 # -- JSON API routes ----------------------------------------------------------
 
-@router.get("/api/", response_model=list[QuoteRead], tags=["Quotes API"])
+@router.get("/api/", response_model=list[QuoteRead])
 def list_quotes(
     session: SessionDep,
     quote_status: Optional[QuoteStatus] = Query(None, alias="status"),
@@ -65,7 +65,7 @@ def list_quotes(
     return session.exec(stmt).all()
 
 
-@router.post("/api/", response_model=QuoteRead, status_code=status.HTTP_201_CREATED, tags=["Quotes API"])
+@router.post("/api/", response_model=QuoteRead, status_code=status.HTTP_201_CREATED)
 def create_quote(payload: QuoteCreate, session: SessionDep):
     quote = Quote(**payload.model_dump())
     session.add(quote)
@@ -74,12 +74,12 @@ def create_quote(payload: QuoteCreate, session: SessionDep):
     return quote
 
 
-@router.get("/api/{quote_id}", response_model=QuoteRead, tags=["Quotes API"])
+@router.get("/api/{quote_id}", response_model=QuoteRead)
 def get_quote(quote_id: int, session: SessionDep):
     return _get_or_404(session, quote_id)
 
 
-@router.patch("/api/{quote_id}", response_model=QuoteRead, tags=["Quotes API"])
+@router.patch("/api/{quote_id}", response_model=QuoteRead)
 def update_quote(quote_id: int, payload: QuoteUpdate, session: SessionDep):
     quote = _get_or_404(session, quote_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
@@ -90,7 +90,7 @@ def update_quote(quote_id: int, payload: QuoteUpdate, session: SessionDep):
     return quote
 
 
-@router.delete("/api/{quote_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Quotes API"])
+@router.delete("/api/{quote_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_quote(quote_id: int, session: SessionDep):
     quote = _get_or_404(session, quote_id)
     session.delete(quote)

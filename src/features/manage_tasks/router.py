@@ -41,7 +41,7 @@ def tasks_page(request: Request, session: SessionDep):
 
 # -- JSON API routes ----------------------------------------------------------
 
-@router.get("/api/", response_model=list[TaskRead], tags=["Tasks API"])
+@router.get("/api/", response_model=list[TaskRead])
 def list_tasks(
     session: SessionDep,
     quote_id: Optional[int] = Query(None),
@@ -55,7 +55,7 @@ def list_tasks(
     return session.exec(stmt).all()
 
 
-@router.post("/api/", response_model=TaskRead, status_code=status.HTTP_201_CREATED, tags=["Tasks API"])
+@router.post("/api/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 def create_task(payload: TaskCreate, session: SessionDep):
     task = Task(**payload.model_dump())
     session.add(task)

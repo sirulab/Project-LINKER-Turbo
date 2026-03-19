@@ -51,12 +51,12 @@ def companies_page(request: Request, session: SessionDep):
 
 # -- JSON API routes ----------------------------------------------------------
 
-@router.get("/api/", response_model=list[CompanyRead], tags=["Companies API"])
+@router.get("/api/", response_model=list[CompanyRead])
 def list_companies(session: SessionDep):
     return session.exec(select(Company)).all()
 
 
-@router.post("/api/", response_model=CompanyRead, status_code=status.HTTP_201_CREATED, tags=["Companies API"])
+@router.post("/api/", response_model=CompanyRead, status_code=status.HTTP_201_CREATED)
 def create_company(payload: CompanyCreate, session: SessionDep):
     company = Company(**payload.model_dump())
     session.add(company)
@@ -65,12 +65,12 @@ def create_company(payload: CompanyCreate, session: SessionDep):
     return company
 
 
-@router.get("/api/{company_id}", response_model=CompanyRead, tags=["Companies API"])
+@router.get("/api/{company_id}", response_model=CompanyRead)
 def get_company(company_id: int, session: SessionDep):
     return _get_or_404(session, company_id)
 
 
-@router.patch("/api/{company_id}", response_model=CompanyRead, tags=["Companies API"])
+@router.patch("/api/{company_id}", response_model=CompanyRead)
 def update_company(company_id: int, payload: CompanyUpdate, session: SessionDep):
     company = _get_or_404(session, company_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
@@ -81,7 +81,7 @@ def update_company(company_id: int, payload: CompanyUpdate, session: SessionDep)
     return company
 
 
-@router.delete("/api/{company_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Companies API"])
+@router.delete("/api/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_company(company_id: int, session: SessionDep):
     company = _get_or_404(session, company_id)
     session.delete(company)

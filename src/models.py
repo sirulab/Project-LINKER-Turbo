@@ -11,10 +11,25 @@ database.py discovers every table in this file automatically.
 Financial fields (total_amount, unit_price, hourly_rate) use Python's
 Decimal type for precision.  SQLite stores these as NUMERIC; switching to
 PostgreSQL will use the native NUMERIC column without model changes.
+
+── Auto-generated field convention ──────────────────────────────────────────
+  id          Optional[int], primary_key=True, default=None
+              → SQLite/PostgreSQL auto-increments on INSERT; never include in
+                Create schemas so Swagger UI hides it.
+
+  created_at  datetime, default_factory=lambda: datetime.now(timezone.utc)
+              → Timezone-aware UTC timestamp set at INSERT time; never include
+                in Create schemas.
+
+  date_logged date, default_factory=date.today
+              → Defaults to today but is surfaced in the Timesheet HTML form
+                so the employee can correct it; intentionally kept in the form
+                schema as a user-editable field.
+─────────────────────────────────────────────────────────────────────────────
 """
 
 import enum
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
@@ -116,7 +131,7 @@ class Quote(SQLModel, table=True):
     status:       QuoteStatus     = Field(default=QuoteStatus.draft)
     total_amount: Decimal         = Field(default=Decimal("0.00"), description="Sum of Task line amounts (NTD)")
     valid_until:  Optional[date]  = Field(default=None)
-    created_at:   datetime        = Field(default_factory=datetime.utcnow)
+    created_at:   datetime        = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # FK
     project_id:   Optional[int]  = Field(default=None, foreign_key="project.id")
@@ -186,7 +201,7 @@ class Timesheet(SQLModel, table=True):
 
     id:           Optional[int] = Field(default=None, primary_key=True)
     hours_logged: float          = Field(gt=0, description="Hours spent (must be > 0)")
-    date_logged:  date           = Field(description="Calendar date of the work")
+    date_logged:  date           = Field(default_factory=date.today, description="Calendar date of the work; defaults to today")
     description:  Optional[str] = Field(default=None, description="Brief work summary")
 
     # FKs — intentionally non-nullable at the DB level via foreign_key + index.
