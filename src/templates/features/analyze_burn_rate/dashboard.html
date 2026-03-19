@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}燃燒率儀表板 — LINKER Turbo{% endblock %}
+
+{# ── Scoped styles ─────────────────────────────────────────────────────────── #}
+{% block extra_head %}
+<style>
+  /* ── Donut chart (CSS conic-gradient) ────────────────────────── */
+  .donut-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .donut-inner {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #fff;
+  }
+  .donut-label {
+    position: relative;
+    z-index: 1;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+  }
+
+  /* ── Project card ─────────────────────────────────────────────── */
+  .project-card {
+    transition: transform .18s ease, box-shadow .18s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+  }
+  .project-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.12) !important;
+    color: inherit;
+  }
+
+  /* ── Status badges ────────────────────────────────────────────── */
+  .status-pill-active    { background: #d1e7dd; color: #0a3622; }
+  .status-pill-completed { background: #cfe2ff; color: #084298; }
+  .status-pill-archived  { background: #e2e3e5; color: #41464b; }
+
+  /* ── Warn stripe ──────────────────────────────────────────────── */
+  .warn-stripe {
+    background: repeating-linear-gradient(
+      -45deg,
+      rgba(220,53,69,.06),
+      rgba(220,53,69,.06) 6px,
+      transparent 6px,
+      transparent 12px
+    );
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Page header ──────────────────────────────────────────────────────────── #}
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+  <div>
+    <h2 class="fw-bold mb-1">
+      <i class="bi bi-speedometer2 me-2 text-warning"></i>燃燒率儀表板
+    </h2>
+    <p class="text-muted small mb-0">
+      顯示所有專案的工時消耗狀況。當任務已投入工時超過預估的
+      <strong>80 %</strong> 且尚未完成時，系統亮起紅燈警告。
+    </p>
+  </div>
+  <a href="/burn-rate/api/projects" class="btn btn-outline-secondary btn-sm" target="_blank">
+    <i class="bi bi-braces me-1"></i>JSON API
+  </a>
+</div>
+
+{# ── Summary counters ─────────────────────────────────────────────────────── #}
+{% set warn_count  = projects | selectattr('burn_warning', 'equalto', true) | list | length %}
+{% set total_count = projects | length %}
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="display-6 fw-bold text-primary">{{ total_count }}</div>
+      <div class="text-muted small mt-1">專案總數</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 {% if warn_count > 0 %}border-danger border{% endif %}">
+      <div class="display-6 fw-bold text-danger">{{ warn_count }}</div>
+      <div class="text-muted small mt-1">
+        <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>超過警示線
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="display-6 fw-bold text-success">
+        {{ projects | sum(attribute='total_hours_logged') | round(1) }}
+      </div>
+      <div class="text-muted small mt-1">已投入工時 (h)</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="display-6 fw-bold text-secondary">
+        {{ projects | sum(attribute='total_quantity') | round(1) }}
+      </div>
+      <div class="text-muted small mt-1">預估總工時 (h)</div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Project cards grid ───────────────────────────────────────────────────── #}
+{% if projects %}
+<div class="row g-3">
+
+  {% for proj in projects %}
+  {# Determine donut colour based on overall burn percentage #}
+  {% if proj.burn_warning %}
+    {% set donut_color = '#dc3545' %}
+    {% set label_color = 'text-danger' %}
+  {% elif proj.overall_burn_pct >= 50 %}
+    {% set donut_color = '#fd7e14' %}
+    {% set label_color = 'text-warning' %}
+  {% else %}
+    {% set donut_color = '#198754' %}
+    {% set label_color = 'text-success' %}
+  {% endif %}
+  {% set capped = [proj.overall_burn_pct, 100] | min %}
+
+  <div class="col-12 col-sm-6 col-xl-4">
+    <a
+      href="/burn-rate/projects/{{ proj.project_id }}"
+      class="project-card card border-0 shadow-sm d-block h-100 {% if proj.burn_warning %}warn-stripe{% endif %}"
+    >
+      <div class="card-body d-flex gap-3 align-items-start p-3">
+
+        {# Donut chart #}
+        <div
+          class="donut-wrap flex-shrink-0"
+          style="background: conic-gradient({{ donut_color }} {{ capped }}%, #dee2e6 0%);"
+          title="{{ proj.overall_burn_pct }}% 燃燒率"
+        >
+          <div class="donut-inner"></div>
+          <div class="donut-label {{ label_color }}">
+            {{ proj.overall_burn_pct | round(0) | int }}%
+          </div>
+        </div>
+
+        {# Text content #}
+        <div class="flex-grow-1 min-w-0">
+
+          {# Header row: name + status pill #}
+          <div class="d-flex align-items-start justify-content-between gap-1 mb-1">
+            <h6 class="fw-bold mb-0 text-truncate" title="{{ proj.project_name }}">
+              {{ proj.project_name }}
+            </h6>
+            <span class="badge rounded-pill status-pill-{{ proj.project_status.value }} ms-1 text-nowrap">
+              {% if proj.project_status.value == 'active' %}進行中
+              {% elif proj.project_status.value == 'completed' %}已結案
+              {% else %}已歸檔{% endif %}
+            </span>
+          </div>
+
+          {# Burn warning badge #}
+          {% if proj.burn_warning %}
+          <div class="mb-1">
+            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill small">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>超過 80 % 警示
+            </span>
+          </div>
+          {% endif %}
+
+          {# Metrics row #}
+          <div class="row g-0 text-center mt-2 pt-2 border-top">
+            <div class="col-4">
+              <div class="fw-semibold small">{{ proj.task_count }}</div>
+              <div class="text-muted" style="font-size:10px;">任務數</div>
+            </div>
+            <div class="col-4">
+              <div class="fw-semibold small text-danger">{{ proj.total_hours_logged }}</div>
+              <div class="text-muted" style="font-size:10px;">已投入 h</div>
+            </div>
+            <div class="col-4">
+              <div class="fw-semibold small">{{ proj.total_quantity }}</div>
+              <div class="text-muted" style="font-size:10px;">預估 h</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {# Card footer: progress bar #}
+      <div class="px-3 pb-3">
+        <div class="progress" style="height:5px;" title="{{ proj.overall_burn_pct }}%">
+          <div
+            class="progress-bar {% if proj.burn_warning %}bg-danger{% elif proj.overall_burn_pct >= 50 %}bg-warning{% else %}bg-success{% endif %}"
+            style="width: {{ capped }}%;"
+          ></div>
+        </div>
+      </div>
+
+    </a>
+  </div>
+  {% endfor %}
+
+</div>
+
+{% else %}
+{# ── Empty state ──────────────────────────────────────────────────────────── #}
+<div class="text-center py-5">
+  <i class="bi bi-inbox display-3 text-muted"></i>
+  <h5 class="mt-3 text-muted">尚無任何專案資料</h5>
+  <p class="text-muted small">請先建立專案並新增已接受的報價單。</p>
+  <a href="/projects" class="btn btn-primary btn-sm mt-1">
+    <i class="bi bi-folder2-open me-1"></i>前往專案列表
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,9 +1,9 @@
-"""Feature: submit_timesheet — HTMX-driven timesheet entry for employees.
+"""Feature: submit_timesheet - HTMX-driven timesheet entry for employees.
 
 Route map
-?????????
+---------
 GET  /timesheet/my
-    Renders the full "??????" page.
+    Renders the full "my tasks" page.
     Query param: ?employee_id=<int>  (placeholder until auth middleware is ready)
 
 GET  /timesheet/tasks/{task_id}/modal
@@ -18,8 +18,8 @@ POST /timesheet/tasks/{task_id}/done
       3. Validate hours_logged > 0 via TimesheetCreate schema.
       4. Persist the Timesheet record.
       5. Auto-transition Task.status:
-           todo  ? done  (first-ever log; skips "doing" in this one-shot flow)
-           doing ? done
+           todo  -> done  (first-ever log; skips "doing" in this one-shot flow)
+           doing -> done
     Returns HTMX OOB-swap toast + HX-Trigger: closeModal header.
 """
 
@@ -54,7 +54,7 @@ _TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "templates"
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 
 
-# ?? Helpers ???????????????????????????????????????????????????????????????????
+# -- Helpers ------------------------------------------------------------------
 
 def _get_task_or_404(session: Session, task_id: int) -> Task:
     task = session.get(Task, task_id)
@@ -84,7 +84,7 @@ def _assert_project_active(task: Task, session: Session) -> None:
             )
 
 
-# ?? Routes ????????????????????????????????????????????????????????????????????
+# -- Routes -------------------------------------------------------------------
 
 @router.get("/my", response_class=HTMLResponse)
 def my_tasks_page(
@@ -92,7 +92,7 @@ def my_tasks_page(
     session: SessionDep,
     employee_id: Optional[int] = Query(None),
 ):
-    """Full page: ??????."""
+    """Full page: my tasks (employee view)."""
     task_data = get_open_tasks(session)
     return templates.TemplateResponse(
         request,
@@ -115,7 +115,7 @@ def get_modal_body(
     """HTMX partial: returns the modal body form for a specific task."""
     task = _get_task_or_404(session, task_id)
     quote = session.get(Quote, task.quote_id)
-    project_name = quote.project.name if (quote and quote.project) else "—"
+    project_name = quote.project.name if (quote and quote.project) else "-"
 
     return templates.TemplateResponse(
         request,
@@ -133,19 +133,19 @@ def get_modal_body(
 def submit_and_mark_done(
     task_id: int,
     session: SessionDep,
-    employee_id: int        = Form(...),
-    hours_logged: float     = Form(...),
-    date_logged: date       = Form(...),
+    employee_id: int           = Form(...),
+    hours_logged: float        = Form(...),
+    date_logged: date          = Form(...),
     description: Optional[str] = Form(None),
 ):
-    """Submit timesheet entry and transition task ? done.
+    """Submit timesheet entry and transition task -> done.
 
     HTMX expects:
       hx-target  = "#task-row-{task_id}"
       hx-swap    = "delete"            (removes the row on success)
     Response includes an OOB-swap toast and HX-Trigger: closeModal header.
     """
-    # ?? Validation ????????????????????????????????????????????????????????????
+    # -- Validation -----------------------------------------------------------
     task     = _get_task_or_404(session, task_id)
     employee = _get_employee_or_404(session, employee_id)
     _assert_project_active(task, session)
@@ -160,7 +160,7 @@ def submit_and_mark_done(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
 
-    # ?? Persist ???????????????????????????????????????????????????????????????
+    # -- Persist --------------------------------------------------------------
     timesheet = Timesheet(
         task_id=task_id,
         employee_id=employee.id,
@@ -170,12 +170,12 @@ def submit_and_mark_done(
     )
     session.add(timesheet)
 
-    # Auto-transition: todo / doing ? done (one-shot "done" action)
+    # Auto-transition: todo / doing -> done (one-shot "done" action)
     task.status = TaskStatus.done
     session.add(task)
     session.commit()
 
-    # ?? HTMX response ?????????????????????????????????????????????????????????
+    # -- HTMX response --------------------------------------------------------
     # The main swap target (#task-row-{task_id}) is deleted by hx-swap="delete".
     # The OOB swap injects a success toast into #toast-container.
     toast_html = (
@@ -184,8 +184,8 @@ def submit_and_mark_done(
         f'    <div class="d-flex">'
         f'      <div class="toast-body">'
         f'        <i class="bi bi-check-circle-fill me-2"></i>'
-        f'        ??? <strong>{payload.hours_logged} ??</strong>??? '
-        f'        <strong>{task.name}</strong> ??????'
+        f'        ??? <strong>{payload.hours_logged} ??</strong>?'
+        f'        <strong>{task.name}</strong> ????'
         f'      </div>'
         f'      <button type="button" class="btn-close btn-close-white me-2 m-auto"'
         f'              data-bs-dismiss="toast"></button>'

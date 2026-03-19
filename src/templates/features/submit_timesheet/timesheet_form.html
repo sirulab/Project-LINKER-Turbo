@@ -5,17 +5,33 @@
 {# ── Extra head: scoped styles for this page ──────────────────────────────── #}
 {% block extra_head %}
 <style>
-  .burn-bar-track {
-    height: 6px;
-    border-radius: 3px;
-    background: #e9ecef;
-    overflow: hidden;
+  /* ── Mini donut (CSS conic-gradient, no JS) ──────────────────── */
+  .donut-mini {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    flex-shrink: 0;
   }
-  .burn-bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width .3s ease;
+  .donut-mini-inner {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #fff;
   }
+  .donut-mini-label {
+    position: relative;
+    z-index: 1;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+  }
+
   .status-badge-todo  { background-color: #6c757d; }
   .status-badge-doing { background-color: #0d6efd; }
   .task-row:hover { background-color: #f8f9fa; }
@@ -87,10 +103,10 @@
     <table class="table table-hover align-middle mb-0">
       <thead class="table-light">
         <tr>
+          <th style="min-width:48px;"></th>         {# donut #}
           <th style="min-width:180px;">任務名稱</th>
           <th style="min-width:140px;">所屬專案</th>
           <th class="text-center" style="width:90px;">狀態</th>
-          <th style="min-width:160px;">燃燒率</th>
           <th class="text-end" style="width:80px;">已投入</th>
           <th class="text-end" style="width:80px;">預估</th>
           <th class="text-center" style="width:100px;">操作</th>
@@ -99,11 +115,42 @@
       <tbody>
 
         {% for item in task_data %}
+        {# Donut colour per task #}
+        {% if item.burn_warning %}
+          {% set d_color = '#dc3545' %}
+          {% set d_label = 'text-danger' %}
+        {% elif item.burn_pct >= 50 %}
+          {% set d_color = '#fd7e14' %}
+          {% set d_label = 'text-warning' %}
+        {% else %}
+          {% set d_color = '#198754' %}
+          {% set d_label = 'text-success' %}
+        {% endif %}
+        {% set d_capped = [item.burn_pct, 100] | min %}
+
         <tr class="task-row" id="task-row-{{ item.task.id }}">
+
+          {# Mini donut chart #}
+          <td class="ps-3">
+            <div
+              class="donut-mini"
+              style="background: conic-gradient({{ d_color }} {{ d_capped }}%, #dee2e6 0%);"
+              title="{{ item.burn_pct }}% 燃燒率"
+            >
+              <div class="donut-mini-inner"></div>
+              <div class="donut-mini-label {{ d_label }}">
+                {{ item.burn_pct | round(0) | int }}%
+              </div>
+            </div>
+          </td>
 
           {# Task name + description tooltip #}
           <td>
             <span class="fw-semibold text-dark">{{ item.task.name }}</span>
+            {% if item.burn_warning %}
+            <i class="bi bi-exclamation-triangle-fill text-danger ms-1 small"
+               title="已投入工時超過 80%，請注意！"></i>
+            {% endif %}
             {% if item.task.description %}
             <br>
             <small class="text-muted">{{ item.task.description | truncate(60) }}</small>
@@ -128,24 +175,6 @@
               <i class="bi bi-play-fill me-1"></i>進行中
             </span>
             {% endif %}
-          </td>
-
-          {# Burn-rate progress bar #}
-          <td>
-            <div class="d-flex align-items-center gap-2">
-              <div class="burn-bar-track flex-grow-1">
-                <div
-                  class="burn-bar-fill {% if item.burn_warning %}bg-danger{% elif item.burn_pct >= 50 %}bg-warning{% else %}bg-success{% endif %}"
-                  style="width: {{ [item.burn_pct, 100] | min }}%;"
-                ></div>
-              </div>
-              <small class="text-nowrap {% if item.burn_warning %}text-danger fw-bold{% else %}text-muted{% endif %}">
-                {{ item.burn_pct }}%
-                {% if item.burn_warning %}
-                <i class="bi bi-exclamation-triangle-fill ms-1" title="超過 80%，請注意！"></i>
-                {% endif %}
-              </small>
-            </div>
           </td>
 
           {# Hours logged #}

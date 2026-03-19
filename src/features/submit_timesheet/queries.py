@@ -1,4 +1,4 @@
-"""Feature: submit_timesheet — reusable DB query helpers."""
+"""Feature: submit_timesheet - reusable DB query helpers."""
 
 from sqlmodel import Session, select
 
@@ -13,7 +13,7 @@ def get_open_tasks(session: Session) -> list[dict]:
       project_name  - str
       quote_number  - str
       total_hours   - float (sum of all timesheets on this task)
-      burn_pct      - float (0–100+)
+      burn_pct      - float (0-100+)
       burn_warning  - bool  (True when burn_pct >= 80)
     """
     stmt = (

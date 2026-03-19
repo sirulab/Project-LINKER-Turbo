@@ -1,4 +1,4 @@
-"""Feature: submit_timesheet — request / response schemas.
+"""Feature: submit_timesheet - request / response schemas.
 
 Story 2 AC validation rules:
   - hours_logged must be > 0 (field-level validator)
@@ -24,7 +24,7 @@ class TimesheetCreate(BaseModel):
     @classmethod
     def hours_must_be_positive(cls, v: float) -> float:
         if v <= 0:
-            raise ValueError("?????? 0 ??")
+            raise ValueError("hours_logged must be greater than 0")
         return v
 
 

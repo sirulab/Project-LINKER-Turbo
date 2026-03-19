@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}{{ data.project_name }} — 燃燒率分析 — LINKER Turbo{% endblock %}
+
+{# ── Scoped styles ─────────────────────────────────────────────────────────── #}
+{% block extra_head %}
+<style>
+  /* ── Mini donut (table rows) ─────────────────────────────────── */
+  .donut-mini {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .donut-mini-inner {
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #fff;
+  }
+  .donut-mini-label {
+    position: relative;
+    z-index: 1;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+  }
+
+  /* ── Summary donut (hero area) ───────────────────────────────── */
+  .donut-hero {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .donut-hero-inner {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .donut-hero-pct {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .donut-hero-sub {
+    font-size: 10px;
+    color: #6c757d;
+    margin-top: 2px;
+  }
+
+  /* ── Task table ───────────────────────────────────────────────── */
+  .task-row:hover { background-color: #f8f9fa; }
+  .task-row.row-warning { background-color: rgba(220,53,69,.04); }
+  .task-row.row-warning:hover { background-color: rgba(220,53,69,.08); }
+
+  /* ── Status badges ────────────────────────────────────────────── */
+  .badge-todo  { background: #6c757d; }
+  .badge-doing { background: #0d6efd; }
+  .badge-done  { background: #198754; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Breadcrumb ───────────────────────────────────────────────────────────── #}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="/burn-rate/" class="text-decoration-none">
+        <i class="bi bi-speedometer2 me-1"></i>燃燒率儀表板
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      {{ data.project_name }}
+    </li>
+  </ol>
+</nav>
+
+{# ── Hero section: project summary ────────────────────────────────────────── #}
+{% if data.overall_burn_pct >= 80 %}
+  {% set hero_color = '#dc3545' %}
+  {% set hero_text  = 'text-danger' %}
+{% elif data.overall_burn_pct >= 50 %}
+  {% set hero_color = '#fd7e14' %}
+  {% set hero_text  = 'text-warning' %}
+{% else %}
+  {% set hero_color = '#198754' %}
+  {% set hero_text  = 'text-success' %}
+{% endif %}
+{% set hero_capped = [data.overall_burn_pct, 100] | min %}
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex flex-wrap gap-4 align-items-center">
+
+      {# Hero donut #}
+      <div
+        class="donut-hero"
+        style="background: conic-gradient({{ hero_color }} {{ hero_capped }}%, #dee2e6 0%);"
+        title="整體燃燒率 {{ data.overall_burn_pct }}%"
+      >
+        <div class="donut-hero-inner">
+          <div class="donut-hero-pct {{ hero_text }}">
+            {{ data.overall_burn_pct | round(0) | int }}%
+          </div>
+          <div class="donut-hero-sub">整體燃燒率</div>
+        </div>
+      </div>
+
+      {# Project info #}
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+          <h3 class="fw-bold mb-0">{{ data.project_name }}</h3>
+          <span class="badge rounded-pill
+            {% if data.project_status.value == 'active' %}bg-success
+            {% elif data.project_status.value == 'completed' %}bg-primary
+            {% else %}bg-secondary{% endif %}">
+            {% if data.project_status.value == 'active' %}進行中
+            {% elif data.project_status.value == 'completed' %}已結案
+            {% else %}已歸檔{% endif %}
+          </span>
+          {% if data.burn_warning %}
+          <span class="badge bg-danger">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>超過 80 % 警示
+          </span>
+          {% endif %}
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-auto">
+            <div class="text-muted small">任務總數</div>
+            <div class="fw-bold fs-5">{{ data.task_count }}</div>
+          </div>
+          <div class="col-auto">
+            <div class="text-muted small">已投入工時</div>
+            <div class="fw-bold fs-5 text-danger">{{ data.total_hours_logged }} h</div>
+          </div>
+          <div class="col-auto">
+            <div class="text-muted small">預估總工時</div>
+            <div class="fw-bold fs-5">{{ data.total_quantity }} h</div>
+          </div>
+          <div class="col-auto">
+            <div class="text-muted small">剩餘工時</div>
+            <div class="fw-bold fs-5 text-secondary">{{ data.remaining_hours }} h</div>
+          </div>
+        </div>
+
+        {# Overall progress bar #}
+        <div class="mt-3">
+          <div class="d-flex justify-content-between small text-muted mb-1">
+            <span>整體進度</span>
+            <span>{{ data.total_hours_logged }} / {{ data.total_quantity }} h</span>
+          </div>
+          <div class="progress" style="height:8px;">
+            <div
+              class="progress-bar {% if data.burn_warning %}bg-danger{% elif data.overall_burn_pct >= 50 %}bg-warning{% else %}bg-success{% endif %}"
+              style="width: {{ hero_capped }}%;"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      {# API link #}
+      <a
+        href="/burn-rate/api/projects/{{ data.project_id }}"
+        class="btn btn-outline-secondary btn-sm align-self-start"
+        target="_blank"
+      >
+        <i class="bi bi-braces me-1"></i>JSON
+      </a>
+
+    </div>
+  </div>
+</div>
+
+{# ── Task table ───────────────────────────────────────────────────────────── #}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
+    <span class="fw-semibold text-dark">
+      <i class="bi bi-list-task me-2 text-primary"></i>任務清單（已接受報價）
+    </span>
+    <span class="badge bg-primary rounded-pill">{{ data.task_count }} 筆</span>
+  </div>
+
+  {% if data.tasks %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="min-width:48px;"></th>         {# donut column #}
+          <th style="min-width:180px;">任務名稱</th>
+          <th class="text-center" style="width:90px;">狀態</th>
+          <th class="text-end" style="width:90px;">已投入</th>
+          <th class="text-end" style="width:90px;">預估</th>
+          <th class="text-end" style="width:90px;">剩餘</th>
+          <th class="text-center" style="width:80px;">燃燒率</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        {% for task in data.tasks %}
+        {# Per-task colour logic #}
+        {% if task.burn_warning %}
+          {% set t_color = '#dc3545' %}
+          {% set t_label = 'text-danger' %}
+        {% elif task.burn_pct >= 50 %}
+          {% set t_color = '#fd7e14' %}
+          {% set t_label = 'text-warning' %}
+        {% else %}
+          {% set t_color = '#198754' %}
+          {% set t_label = 'text-success' %}
+        {% endif %}
+        {% set t_capped = [task.burn_pct, 100] | min %}
+
+        <tr class="task-row {% if task.burn_warning %}row-warning{% endif %}">
+
+          {# ── Mini donut ──────────────────────────────────────── #}
+          <td class="ps-3">
+            <div
+              class="donut-mini"
+              style="background: conic-gradient({{ t_color }} {{ t_capped }}%, #dee2e6 0%);"
+              title="{{ task.task_name }}: {{ task.burn_pct }}%"
+            >
+              <div class="donut-mini-inner"></div>
+              <div class="donut-mini-label {{ t_label }}">
+                {{ task.burn_pct | round(0) | int }}%
+              </div>
+            </div>
+          </td>
+
+          {# ── Task name ───────────────────────────────────────── #}
+          <td>
+            <div class="fw-semibold">{{ task.task_name }}</div>
+            {% if task.burn_warning %}
+            <small class="text-danger">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>超出 80 % 警示線
+            </small>
+            {% endif %}
+          </td>
+
+          {# ── Status badge ────────────────────────────────────── #}
+          <td class="text-center">
+            {% if task.task_status.value == 'todo' %}
+            <span class="badge badge-todo rounded-pill px-2">
+              <i class="bi bi-clock me-1"></i>待辦
+            </span>
+            {% elif task.task_status.value == 'doing' %}
+            <span class="badge badge-doing rounded-pill px-2">
+              <i class="bi bi-play-fill me-1"></i>進行中
+            </span>
+            {% else %}
+            <span class="badge badge-done rounded-pill px-2">
+              <i class="bi bi-check-circle-fill me-1"></i>完成
+            </span>
+            {% endif %}
+          </td>
+
+          {# ── Hours logged ────────────────────────────────────── #}
+          <td class="text-end">
+            <span class="fw-semibold {% if task.burn_warning %}text-danger{% endif %}">
+              {{ task.total_hours_logged }}
+            </span>
+            <small class="text-muted">h</small>
+          </td>
+
+          {# ── Quantity (estimated) ─────────────────────────────── #}
+          <td class="text-end text-muted">
+            {{ task.quantity }}<small>h</small>
+          </td>
+
+          {# ── Remaining ───────────────────────────────────────── #}
+          <td class="text-end text-secondary">
+            {% if task.remaining_hours == 0 and task.total_hours_logged > task.quantity %}
+              <span class="text-danger fw-bold">
+                +{{ (task.total_hours_logged - task.quantity) | round(2) }}h
+              </span>
+            {% else %}
+              {{ task.remaining_hours }}<small>h</small>
+            {% endif %}
+          </td>
+
+          {# ── Burn pct text ─────────────────────────────────────── #}
+          <td class="text-center">
+            <span class="fw-bold {{ t_label }}">{{ task.burn_pct }}%</span>
+            {% if task.burn_warning %}
+            <br>
+            <i class="bi bi-exclamation-triangle-fill text-danger small"></i>
+            {% endif %}
+          </td>
+
+        </tr>
+        {% endfor %}
+
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="text-center py-5">
+    <i class="bi bi-inbox display-4 text-muted"></i>
+    <h6 class="mt-3 text-muted">此專案目前沒有已接受報價下的任務</h6>
+    <p class="text-muted small">請確認報價單狀態已設為「已接受 (accepted)」。</p>
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}
