@@ -1,9 +1,15 @@
 """
 Shared module: database connection and session management.
 
-Uses SQLModel (SQLAlchemy under the hood) with a SQLite engine.
+Uses SQLModel (SQLAlchemy under the hood).
 The session dependency `get_session` is injected into routers via FastAPI's DI system.
-Switching to PostgreSQL later only requires changing DATABASE_URL in .env.
+
+Database strategy:
+  - SQLite  (local dev) : tables are created automatically via create_db_and_tables().
+  - PostgreSQL (production): tables are managed exclusively by Alembic migrations.
+    The entrypoint script runs `alembic upgrade head` before the server starts.
+
+Switching environments only requires changing DATABASE_URL in .env.
 """
 
 import os
@@ -16,29 +22,31 @@ load_dotenv()
 
 DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./linker.db")
 
-# `check_same_thread=False` is required for SQLite when used with FastAPI's
-# async request handling across multiple threads.
-connect_args: dict = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+_is_sqlite = DATABASE_URL.startswith("sqlite")
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args, echo=False)
+# SQLite requires check_same_thread=False for FastAPI's threaded request handling.
+connect_args: dict = {"check_same_thread": False} if _is_sqlite else {}
+
+# pool_pre_ping tests connections before use — essential for long-lived PG connections.
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    echo=False,
+    pool_pre_ping=not _is_sqlite,   # NullPool is used for SQLite; pre_ping is PG-only
+)
 
 
 def create_db_and_tables() -> None:
-    """Create all tables defined in SQLModel metadata. Called once on startup."""
-    SQLModel.metadata.create_all(engine)
+    """Auto-create tables for SQLite dev only.
+
+    For PostgreSQL, this is a no-op: Alembic migrations (alembic upgrade head)
+    run via scripts/entrypoint.sh before the server starts.
+    """
+    if _is_sqlite:
+        SQLModel.metadata.create_all(engine)
 
 
 def get_session() -> Generator[Session, None, None]:
-    """
-    FastAPI dependency that provides a database session per request.
-
-    Usage in a router:
-        from fastapi import Depends
-        from src.database import get_session
-
-        @router.get("/items")
-        def list_items(session: Session = Depends(get_session)):
-            ...
-    """
+    """FastAPI dependency that provides a scoped database session per request."""
     with Session(engine) as session:
         yield session

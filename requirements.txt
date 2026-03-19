@@ -8,6 +8,12 @@ sqlmodel==0.0.22
 aiosqlite==0.20.0
 SQLAlchemy==2.0.48
 
+# Database drivers
+psycopg2-binary==2.9.10   # PostgreSQL (production)
+
+# Schema migrations
+alembic==1.14.1
+
 # Templating
 jinja2==3.1.6
 MarkupSafe==3.0.3

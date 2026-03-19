@@ -1,0 +1,4 @@
+# Ensure shell scripts always use LF line endings in the repo,
+# regardless of the OS where the repo is cloned (prevents CRLF issues in Docker).
+scripts/*.sh  text eol=lf
+*.sh          text eol=lf
