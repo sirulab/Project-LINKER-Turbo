@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}我的待辦任務 — LINKER Turbo{% endblock %}
+
+{# ── Extra head: scoped styles for this page ──────────────────────────────── #}
+{% block extra_head %}
+<style>
+  .burn-bar-track {
+    height: 6px;
+    border-radius: 3px;
+    background: #e9ecef;
+    overflow: hidden;
+  }
+  .burn-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .3s ease;
+  }
+  .status-badge-todo  { background-color: #6c757d; }
+  .status-badge-doing { background-color: #0d6efd; }
+  .task-row:hover { background-color: #f8f9fa; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Toast container (OOB swaps land here) ───────────────────────────────── #}
+<div id="toast-container"
+     class="toast-container position-fixed top-0 end-0 p-3"
+     style="z-index: 1100;">
+</div>
+
+{# ── Page header ─────────────────────────────────────────────────────────── #}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+
+  <div>
+    <h2 class="fw-bold mb-1">
+      <i class="bi bi-check2-square me-2 text-primary"></i>我的待辦任務
+    </h2>
+    <p class="text-muted small mb-0">
+      顯示所有已接受報價單下的開放任務（待辦 / 進行中）。
+      點擊 <strong>Done</strong> 填寫工時並完成任務。
+    </p>
+  </div>
+
+  {# Employee ID picker — placeholder until session auth is implemented #}
+  <form class="d-flex align-items-center gap-2" method="get" action="/timesheet/my">
+    <label for="employeeIdInput" class="form-label mb-0 text-muted small text-nowrap">
+      <i class="bi bi-person-badge me-1"></i>員工 ID：
+    </label>
+    <input
+      id="employeeIdInput"
+      type="number"
+      name="employee_id"
+      value="{{ employee_id or '' }}"
+      class="form-control form-control-sm"
+      style="width: 90px;"
+      min="1"
+      placeholder="ID"
+    >
+    <button type="submit" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-right-circle me-1"></i>切換
+    </button>
+  </form>
+
+</div>
+
+{# ── No employee warning ──────────────────────────────────────────────────── #}
+{% if not employee_id %}
+<div class="alert alert-warning d-flex align-items-center gap-2 mb-4" role="alert">
+  <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+  <div>請在右上方輸入您的 <strong>員工 ID</strong>，以便提交工時時系統能正確綁定紀錄。</div>
+</div>
+{% endif %}
+
+{# ── Task table ───────────────────────────────────────────────────────────── #}
+{% if task_data %}
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
+    <span class="fw-semibold text-dark">
+      <i class="bi bi-list-task me-2 text-primary"></i>待辦清單
+    </span>
+    <span class="badge bg-primary rounded-pill">{{ task_data | length }} 筆</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="min-width:180px;">任務名稱</th>
+          <th style="min-width:140px;">所屬專案</th>
+          <th class="text-center" style="width:90px;">狀態</th>
+          <th style="min-width:160px;">燃燒率</th>
+          <th class="text-end" style="width:80px;">已投入</th>
+          <th class="text-end" style="width:80px;">預估</th>
+          <th class="text-center" style="width:100px;">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        {% for item in task_data %}
+        <tr class="task-row" id="task-row-{{ item.task.id }}">
+
+          {# Task name + description tooltip #}
+          <td>
+            <span class="fw-semibold text-dark">{{ item.task.name }}</span>
+            {% if item.task.description %}
+            <br>
+            <small class="text-muted">{{ item.task.description | truncate(60) }}</small>
+            {% endif %}
+          </td>
+
+          {# Project name #}
+          <td>
+            <span class="text-secondary">{{ item.project_name }}</span>
+            <br>
+            <small class="text-muted font-monospace">{{ item.quote_number }}</small>
+          </td>
+
+          {# Status badge #}
+          <td class="text-center">
+            {% if item.task.status.value == 'todo' %}
+            <span class="badge status-badge-todo rounded-pill px-2">
+              <i class="bi bi-clock me-1"></i>待辦
+            </span>
+            {% elif item.task.status.value == 'doing' %}
+            <span class="badge status-badge-doing rounded-pill px-2">
+              <i class="bi bi-play-fill me-1"></i>進行中
+            </span>
+            {% endif %}
+          </td>
+
+          {# Burn-rate progress bar #}
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="burn-bar-track flex-grow-1">
+                <div
+                  class="burn-bar-fill {% if item.burn_warning %}bg-danger{% elif item.burn_pct >= 50 %}bg-warning{% else %}bg-success{% endif %}"
+                  style="width: {{ [item.burn_pct, 100] | min }}%;"
+                ></div>
+              </div>
+              <small class="text-nowrap {% if item.burn_warning %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                {{ item.burn_pct }}%
+                {% if item.burn_warning %}
+                <i class="bi bi-exclamation-triangle-fill ms-1" title="超過 80%，請注意！"></i>
+                {% endif %}
+              </small>
+            </div>
+          </td>
+
+          {# Hours logged #}
+          <td class="text-end">
+            <span class="fw-semibold">{{ item.total_hours }}</span>
+            <small class="text-muted">h</small>
+          </td>
+
+          {# Estimated quantity #}
+          <td class="text-end text-muted">
+            {{ item.task.quantity }}<small>h</small>
+          </td>
+
+          {# Done button — HTMX fetches modal body, then opens modal #}
+          <td class="text-center">
+            <button
+              type="button"
+              class="btn btn-success btn-sm px-3"
+              hx-get="/timesheet/tasks/{{ item.task.id }}/modal?employee_id={{ employee_id or '' }}"
+              hx-target="#timesheetModalBody"
+              hx-swap="innerHTML"
+              hx-on::after-request="
+                if (event.detail.successful) {
+                  bootstrap.Modal.getOrCreateInstance(
+                    document.getElementById('timesheetModal')
+                  ).show();
+                }
+              "
+              title="填寫工時並完成此任務"
+            >
+              <i class="bi bi-check-circle me-1"></i>Done
+            </button>
+          </td>
+
+        </tr>
+        {% endfor %}
+
+      </tbody>
+    </table>
+  </div>{# /table-responsive #}
+</div>{# /card #}
+
+{% else %}
+{# ── Empty state ─────────────────────────────────────────────────────────── #}
+<div class="text-center py-5">
+  <i class="bi bi-inbox display-3 text-muted"></i>
+  <h5 class="mt-3 text-muted">目前沒有待辦任務</h5>
+  <p class="text-muted small">所有任務均已完成，或尚未有已接受的報價單。</p>
+</div>
+{% endif %}
+
+
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# Bootstrap 5 Modal — structure is static; body is populated by HTMX       #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+<div
+  class="modal fade"
+  id="timesheetModal"
+  tabindex="-1"
+  aria-labelledby="timesheetModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0">
+
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="timesheetModalLabel">
+          <i class="bi bi-clock-history me-2"></i>填寫工時並完成任務
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="關閉"
+        ></button>
+      </div>
+
+      {# HTMX injects _modal_body.html content here #}
+      <div id="timesheetModalBody" class="modal-body">
+        <div class="text-center py-4 text-muted">
+          <div class="spinner-border text-primary mb-2" role="status">
+            <span class="visually-hidden">載入中…</span>
+          </div>
+          <div class="small">載入任務資料…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{# ── /Modal ───────────────────────────────────────────────────────────────── #}
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+  /**
+   * Close the Bootstrap modal when the server sends HX-Trigger: closeModal.
+   * HTMX dispatches a custom DOM event named after the trigger value.
+   */
+  document.body.addEventListener('closeModal', function () {
+    const modalEl = document.getElementById('timesheetModal');
+    const modal   = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+  });
+
+  /**
+   * Auto-dismiss toasts after 5 seconds.
+   * New toasts are injected via HTMX OOB swaps into #toast-container.
+   */
+  document.getElementById('toast-container').addEventListener('htmx:oobAfterSwap', function () {
+    document.querySelectorAll('#toast-container .toast').forEach(function (el) {
+      const toast = bootstrap.Toast.getOrCreateInstance(el, { delay: 5000 });
+      toast.show();
+    });
+  });
+</script>
+{% endblock %}
