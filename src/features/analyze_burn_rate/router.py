@@ -1,8 +1,8 @@
-"""Feature: analyze_burn_rate — router stub."""
+"""Feature: analyze_burn_rate - router stub."""
 
 from fastapi import APIRouter
 
 router = APIRouter()
 
 
-# Routes will be implemented in Phase 03.
+# Routes will be implemented in a later phase.

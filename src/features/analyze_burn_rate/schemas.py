@@ -1,3 +1,3 @@
-"""Feature: analyze_burn_rate — Pydantic/SQLModel schemas."""
+"""Feature: analyze_burn_rate - Pydantic/SQLModel schemas."""
 
-# Schemas will be defined in Phase 03.
+# Schemas will be defined in a later phase.

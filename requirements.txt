@@ -17,3 +17,4 @@ python-dotenv==1.0.1
 
 # Data validation (pulled in by FastAPI/SQLModel, pinned for clarity)
 pydantic==2.11.1
+email-validator==2.2.0

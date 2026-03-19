@@ -1,1 +1,1 @@
-# analyze_burn_rate — services.py stub. Will be implemented in Phase 03.
+# analyze_burn_rate - services.py stub. Will be implemented in a later phase.

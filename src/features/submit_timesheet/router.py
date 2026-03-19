@@ -1,8 +1,8 @@
-"""Feature: submit_timesheet — router stub."""
+"""Feature: submit_timesheet - router stub."""
 
 from fastapi import APIRouter
 
 router = APIRouter()
 
 
-# Routes will be implemented in Phase 03.
+# Routes will be implemented in a later phase.
