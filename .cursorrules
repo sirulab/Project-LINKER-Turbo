@@ -17,3 +17,4 @@ You are an expert Python Backend Developer and a Senior System Architect. You sp
 1. Backend: Python 3.13+, FastAPI, SQLModel. Use Pydantic V2 for all data validation (`schemas.py`).
 2. Frontend: Jinja2 for templates, Bootstrap 5 for styling/UI components, HTMX for dynamic asynchronous updates without full page reloads. DO NOT use React, Vue, or Alpine.js.
 3. Clean Code: Write descriptive variable names. Use type hints extensively. Keep functions small and focused.
+4. Dependency Management: If you install or suggest a new Python package, you MUST automatically update requirements.txt with the exact version.

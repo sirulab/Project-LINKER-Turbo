@@ -1,13 +1,16 @@
 # Web Framework
 fastapi==0.115.12
 uvicorn[standard]==0.34.0
+starlette==0.46.2
 
 # ORM & Database
 sqlmodel==0.0.22
 aiosqlite==0.20.0
+SQLAlchemy==2.0.48
 
 # Templating
 jinja2==3.1.6
+MarkupSafe==3.0.3
 
 # Form & File handling
 python-multipart==0.0.20
@@ -18,3 +21,7 @@ python-dotenv==1.0.1
 # Data validation (pulled in by FastAPI/SQLModel, pinned for clarity)
 pydantic==2.11.1
 email-validator==2.2.0
+
+# Utils
+watchfiles==1.1.1
+anyio==4.12.1
